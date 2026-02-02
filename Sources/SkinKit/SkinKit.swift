@@ -1,33 +1,12 @@
 import Foundation
 import CoreGraphics
+import Compression
 
 /// SkinKit provides parsing and sprite extraction for Winamp-style WSZ skin files.
 ///
 /// The library extracts BMP sprite sheets from WSZ archives (which are ZIP files)
 /// and slices them into individual CGImage sprites based on coordinate definitions
 /// ported from the Webamp project.
-
-/// A unique identifier for a sprite within a skin.
-public enum SpriteName: String, CaseIterable, Sendable {
-    // Main window background
-    case mainWindowBackground = "MAIN_WINDOW_BACKGROUND"
-
-    // Transport buttons
-    case mainPreviousButton = "MAIN_PREVIOUS_BUTTON"
-    case mainPreviousButtonActive = "MAIN_PREVIOUS_BUTTON_ACTIVE"
-    case mainPlayButton = "MAIN_PLAY_BUTTON"
-    case mainPlayButtonActive = "MAIN_PLAY_BUTTON_ACTIVE"
-    case mainPauseButton = "MAIN_PAUSE_BUTTON"
-    case mainPauseButtonActive = "MAIN_PAUSE_BUTTON_ACTIVE"
-    case mainStopButton = "MAIN_STOP_BUTTON"
-    case mainStopButtonActive = "MAIN_STOP_BUTTON_ACTIVE"
-    case mainNextButton = "MAIN_NEXT_BUTTON"
-    case mainNextButtonActive = "MAIN_NEXT_BUTTON_ACTIVE"
-    case mainEjectButton = "MAIN_EJECT_BUTTON"
-    case mainEjectButtonActive = "MAIN_EJECT_BUTTON_ACTIVE"
-
-    // Placeholder - full enum will be implemented in Phase 2
-}
 
 /// Configuration extracted from a skin's pledit.txt file.
 public struct SkinConfig: Sendable {
@@ -50,6 +29,15 @@ public struct SkinConfig: Sendable {
         self.selectedBackgroundColor = selectedBackgroundColor
         self.fontName = fontName
     }
+
+    /// Default Winamp skin configuration (green on black).
+    public static let `default` = SkinConfig(
+        normalTextColor: CGColor(red: 0, green: 1, blue: 0, alpha: 1),
+        currentTextColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1),
+        normalBackgroundColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1),
+        selectedBackgroundColor: CGColor(red: 0, green: 0, blue: 0.5, alpha: 1),
+        fontName: "Arial"
+    )
 }
 
 /// The complete data extracted from a Winamp skin file.
@@ -64,15 +52,35 @@ public struct SkinData: Sendable {
         self.sprites = sprites
         self.config = config
     }
+
+    /// Get a sprite by name.
+    public subscript(sprite: SpriteName) -> CGImage? {
+        sprites[sprite]
+    }
 }
 
 /// Errors that can occur during skin loading.
-public enum SkinError: Error, Sendable {
+public enum SkinError: Error, Sendable, LocalizedError {
     case fileNotFound(String)
     case invalidArchive(String)
     case missingRequiredFile(String)
     case invalidBitmap(String)
     case invalidConfiguration(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .fileNotFound(let path):
+            return "skin file not found: \(path)"
+        case .invalidArchive(let reason):
+            return "invalid skin archive: \(reason)"
+        case .missingRequiredFile(let file):
+            return "missing required file: \(file)"
+        case .invalidBitmap(let reason):
+            return "invalid bitmap: \(reason)"
+        case .invalidConfiguration(let reason):
+            return "invalid configuration: \(reason)"
+        }
+    }
 }
 
 /// Loads and parses Winamp WSZ skin files.
@@ -81,6 +89,8 @@ public enum SkinError: Error, Sendable {
 /// sprite sheets, and slices them into individual sprites based on Winamp's
 /// coordinate definitions.
 public actor SkinLoader {
+    private let fileManager = FileManager.default
+
     public init() {}
 
     /// Load a skin from a file URL.
@@ -88,8 +98,25 @@ public actor SkinLoader {
     /// - Returns: Extracted skin data with sprites and configuration
     /// - Throws: SkinError if loading fails
     public func load(from url: URL) async throws -> SkinData {
-        // Placeholder - full implementation in Phase 2
-        fatalError("Not yet implemented")
+        guard fileManager.fileExists(atPath: url.path) else {
+            throw SkinError.fileNotFound(url.path)
+        }
+
+        // Create temporary directory for extraction
+        let tempDir = fileManager.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        defer {
+            try? fileManager.removeItem(at: tempDir)
+        }
+
+        // Extract ZIP archive
+        try await extractZIP(from: url, to: tempDir)
+
+        // Load sprites and config
+        return try await loadFromDirectory(tempDir)
     }
 
     /// Load a skin bundled with the application.
@@ -97,7 +124,80 @@ public actor SkinLoader {
     /// - Returns: Extracted skin data with sprites and configuration
     /// - Throws: SkinError if loading fails
     public func load(named bundleName: String) async throws -> SkinData {
-        // Placeholder - full implementation in Phase 2
-        fatalError("Not yet implemented")
+        guard let url = Bundle.main.url(forResource: bundleName, withExtension: "wsz") else {
+            throw SkinError.fileNotFound(bundleName + ".wsz")
+        }
+        return try await load(from: url)
+    }
+
+    // MARK: - Private Implementation
+
+    private func extractZIP(from url: URL, to destination: URL) async throws {
+        // Use Process to run unzip command (more reliable than manual ZIP parsing)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-o", "-q", url.path, "-d", destination.path]
+
+        let pipe = Pipe()
+        process.standardError = pipe
+
+        try process.run()
+        process.waitUntilExit()
+
+        if process.terminationStatus != 0 {
+            let errorData = pipe.fileHandleForReading.readDataToEndOfFile()
+            let errorMessage = String(data: errorData, encoding: .utf8) ?? "unknown error"
+            throw SkinError.invalidArchive(errorMessage)
+        }
+    }
+
+    private func loadFromDirectory(_ directory: URL) async throws -> SkinData {
+        var allSprites: [SpriteName: CGImage] = [:]
+        var config = SkinConfig.default
+
+        // Get list of files (case-insensitive matching)
+        let files = try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        let fileMap = Dictionary(
+            files.map { ($0.lastPathComponent.uppercased(), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        // Load each BMP file
+        for bmpFile in SpriteDefinitions.BMPFile.allCases {
+            let filename = bmpFile.filename
+            guard let fileURL = fileMap[filename] ?? fileMap[filename.lowercased()] else {
+                // Optional files can be missing
+                continue
+            }
+
+            guard let data = try? Data(contentsOf: fileURL) else {
+                continue
+            }
+
+            do {
+                let sprites = try BMPLoader.extractSprites(from: data, file: bmpFile)
+                allSprites.merge(sprites) { _, new in new }
+            } catch {
+                // Continue loading other files even if one fails
+                continue
+            }
+        }
+
+        // Verify required sprites exist
+        let required: [SpriteName] = [.mainWindowBackground]
+        for sprite in required {
+            if allSprites[sprite] == nil {
+                throw SkinError.missingRequiredFile("MAIN.BMP (background sprite)")
+            }
+        }
+
+        // Load pledit.txt if present
+        if let pleditURL = fileMap["PLEDIT.TXT"] ?? fileMap["pledit.txt"],
+           let content = try? String(contentsOf: pleditURL, encoding: .utf8) {
+            let parser = INIParser(content: content)
+            config = parser.extractSkinConfig()
+        }
+
+        return SkinData(sprites: allSprites, config: config)
     }
 }
