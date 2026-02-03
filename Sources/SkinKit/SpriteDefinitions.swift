@@ -187,7 +187,7 @@ public enum SpriteDefinitions {
         .mainPauseButtonActive: SpriteRegion(x: 46, y: 18, width: 23, height: 18),
         .mainStopButton: SpriteRegion(x: 69, y: 0, width: 23, height: 18),
         .mainStopButtonActive: SpriteRegion(x: 69, y: 18, width: 23, height: 18),
-        .mainNextButton: SpriteRegion(x: 92, y: 0, width: 23, height: 18),
+        .mainNextButton: SpriteRegion(x: 92, y: 0, width: 22, height: 18),
         .mainNextButtonActive: SpriteRegion(x: 92, y: 18, width: 22, height: 18),
         .mainEjectButton: SpriteRegion(x: 114, y: 0, width: 22, height: 16),
         .mainEjectButtonActive: SpriteRegion(x: 114, y: 16, width: 22, height: 16),
