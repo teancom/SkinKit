@@ -115,8 +115,11 @@ public actor SkinLoader {
         // Extract ZIP archive
         try await extractZIP(from: url, to: tempDir)
 
+        // Find the actual skin directory (may be root or a subdirectory)
+        let skinDir = try findSkinDirectory(in: tempDir)
+
         // Load sprites and config
-        return try await loadFromDirectory(tempDir)
+        return try await loadFromDirectory(skinDir)
     }
 
     /// Load a skin bundled with the application.
@@ -131,6 +134,46 @@ public actor SkinLoader {
     }
 
     // MARK: - Private Implementation
+
+    /// Find the directory containing skin files.
+    /// Some skins have files at the root, others have them in a subdirectory.
+    private func findSkinDirectory(in directory: URL) throws -> URL {
+        let contents = try fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey]
+        )
+
+        // Check if there are BMP files at the root level
+        let hasBMPAtRoot = contents.contains { url in
+            url.pathExtension.lowercased() == "bmp"
+        }
+
+        if hasBMPAtRoot {
+            return directory
+        }
+
+        // Look for subdirectories that might contain skin files
+        let subdirs = contents.filter { url in
+            (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+        }
+
+        // If there's exactly one subdirectory, check if it has BMP files
+        if subdirs.count == 1, let subdir = subdirs.first {
+            let subdirContents = try fileManager.contentsOfDirectory(
+                at: subdir,
+                includingPropertiesForKeys: nil
+            )
+            let hasBMP = subdirContents.contains { url in
+                url.pathExtension.lowercased() == "bmp"
+            }
+            if hasBMP {
+                return subdir
+            }
+        }
+
+        // Default to root directory (let loadFromDirectory handle missing files error)
+        return directory
+    }
 
     private func extractZIP(from url: URL, to destination: URL) async throws {
         // Use Process to run unzip command (more reliable than manual ZIP parsing)
