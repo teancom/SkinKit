@@ -91,6 +91,10 @@ public enum SkinError: Error, Sendable, LocalizedError {
 public actor SkinLoader {
     private let fileManager = FileManager.default
 
+    /// URL for the fallback skin used when a skin lacks PLEDIT.BMP.
+    /// Defaults to the bundled base-2.91.wsz. Can be overridden for testing.
+    public var fallbackSkinURL: URL? = Bundle.main.url(forResource: "base-2.91", withExtension: "wsz")
+
     public init() {}
 
     /// Load a skin from a file URL.
@@ -194,6 +198,41 @@ public actor SkinLoader {
         }
     }
 
+    private func loadPleditFallback(from url: URL) async throws -> [SpriteName: CGImage] {
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-\(UUID().uuidString)")
+        defer { try? fileManager.removeItem(at: tempDir) }
+
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        // Extract the base skin archive
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-o", "-qq", url.path, "-d", tempDir.path]
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw SkinError.invalidArchive("Failed to extract fallback skin")
+        }
+
+        // Find the extracted skin directory
+        let skinDir = try findSkinDirectory(in: tempDir)
+
+        // Find PLEDIT.BMP (case-insensitive)
+        let files = try fileManager.contentsOfDirectory(at: skinDir, includingPropertiesForKeys: nil)
+        let fileMap = Dictionary(
+            files.map { ($0.lastPathComponent.uppercased(), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        guard let pleditURL = fileMap["PLEDIT.BMP"],
+              let data = try? Data(contentsOf: pleditURL) else {
+            return [:]
+        }
+
+        return try BMPLoader.extractSprites(from: data, file: .pledit)
+    }
+
     private func loadFromDirectory(_ directory: URL) async throws -> SkinData {
         var allSprites: [SpriteName: CGImage] = [:]
         var config = SkinConfig.default
@@ -223,6 +262,22 @@ public actor SkinLoader {
             } catch {
                 // Continue loading other files even if one fails
                 continue
+            }
+        }
+
+        // Fallback: if no PLEDIT sprites were loaded, try loading from base skin
+        if allSprites[.playlistTitleBar] == nil {
+            if let baseURL = fallbackSkinURL {
+                do {
+                    let baseSkinSprites = try await loadPleditFallback(from: baseURL)
+                    for (key, value) in baseSkinSprites {
+                        if allSprites[key] == nil {
+                            allSprites[key] = value
+                        }
+                    }
+                } catch {
+                    // Fallback is best-effort; continue without PLEDIT sprites
+                }
             }
         }
 
