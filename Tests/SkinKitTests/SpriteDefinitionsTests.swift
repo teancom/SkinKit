@@ -118,4 +118,45 @@ struct SpriteDefinitionsTests {
             #expect(region.height > 0)
         }
     }
+
+    @Test("PLEDIT sprites are mapped to pledit file")
+    func pleditSpritesAreMappedToPleditFile() {
+        let pleditSprites = SpriteDefinitions.sprites(in: .pledit)
+
+        #expect(pleditSprites.count == 60)
+        #expect(pleditSprites.contains(.playlistTitleBar))
+        #expect(pleditSprites.contains(.playlistAddFile))
+        #expect(pleditSprites.contains(.playlistCloseSelected))
+    }
+
+    @Test("PLEDIT sprite regions have valid coordinates")
+    func pleditSpriteRegionsHaveValidCoordinates() {
+        let titleBar = SpriteDefinitions.region(for: .playlistTitleBar)
+        #expect(titleBar?.x == 26)
+        #expect(titleBar?.y == 21)
+        #expect(titleBar?.width == 100)
+        #expect(titleBar?.height == 20)
+
+        let addFile = SpriteDefinitions.region(for: .playlistAddFile)
+        #expect(addFile?.x == 0)
+        #expect(addFile?.y == 149)
+        #expect(addFile?.width == 22)
+        #expect(addFile?.height == 18)
+
+        let closeSelected = SpriteDefinitions.region(for: .playlistCloseSelected)
+        #expect(closeSelected?.x == 52)
+        #expect(closeSelected?.y == 42)
+        #expect(closeSelected?.width == 9)
+        #expect(closeSelected?.height == 9)
+    }
+
+    @Test("All PLEDIT sprites have regions defined")
+    func allPleditSpritesHaveRegionsDefined() {
+        let pleditSprites = SpriteDefinitions.sprites(in: .pledit)
+
+        for sprite in pleditSprites {
+            let region = SpriteDefinitions.region(for: sprite)
+            #expect(region != nil, "PLEDIT sprite \(sprite.rawValue) should have a region")
+        }
+    }
 }

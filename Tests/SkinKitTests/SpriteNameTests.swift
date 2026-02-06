@@ -128,4 +128,16 @@ struct SpriteNameTests {
             _ = sprite.rawValue
         }
     }
+
+    @Test("Playlist editor sprites exist")
+    func playlistEditorSpritesExist() {
+        #expect(SpriteName.playlistTitleBar.rawValue == "PLAYLIST_TITLE_BAR")
+        #expect(SpriteName.playlistAddFile.rawValue == "PLAYLIST_ADD_FILE")
+        #expect(SpriteName.playlistCloseSelected.rawValue == "PLAYLIST_CLOSE_SELECTED")
+    }
+
+    @Test("SpriteName total count includes PLEDIT sprites")
+    func spriteNameTotalCountIncludesPleditSprites() {
+        #expect(SpriteName.allCases.count == 219)
+    }
 }
