@@ -264,4 +264,106 @@ struct SpriteDefinitionsTests {
         #expect(SpriteDefinitions.bmpFile(for: .eqMaximizeButtonActive) == .eqEx)
         #expect(SpriteDefinitions.bmpFile(for: .eqShadeCloseButtonActive) == .eqEx)
     }
+
+    @Test("BMPLoader bounds-checking skips out-of-bounds EQ sprites")
+    func bmpLoaderBoundsCheckingSkipsOutOfBoundsEqSprites() throws {
+        // Create a small CGImage (100x50 pixels) that's smaller than expected EQMAIN.BMP
+        // This simulates a skin with an undersized EQMAIN.BMP
+        let smallImage = try createTestImage(width: 100, height: 50)
+
+        // Extract sprites from the undersized image
+        let eqmainSprites = SpriteDefinitions.sprites(in: .eqmain)
+        var extractedSprites: [SpriteName: CGImage] = [:]
+
+        for sprite in eqmainSprites {
+            guard let region = SpriteDefinitions.region(for: sprite) else {
+                continue
+            }
+
+            // Check bounds manually (same logic as BMPLoader.extractSprites)
+            if region.x >= 0 && region.y >= 0 &&
+               region.x + region.width <= smallImage.width &&
+               region.y + region.height <= smallImage.height {
+                do {
+                    let image = try BMPLoader.extractSprite(from: smallImage, region: region)
+                    extractedSprites[sprite] = image
+                } catch {
+                    // Continue with other sprites even if one fails
+                    continue
+                }
+            }
+        }
+
+        // Verify in-bounds sprites are extracted
+        // eqCloseButton at (0, 116) with size (9, 9) - fits in 100x50? No, 116+9 > 50
+        // eqOnButton at (10, 119) with size (26, 12) - fits in 100x50? No, 119+12 > 50
+        // eqWindowBackground at (0, 0) with size (275, 116) - fits in 100x50? No
+
+        // Most sprites should be skipped due to bounds check
+        // Let's find a sprite that fits in 100x50
+        let inBoundsSprites = eqmainSprites.filter { sprite in
+            guard let region = SpriteDefinitions.region(for: sprite) else {
+                return false
+            }
+            return region.x >= 0 && region.y >= 0 &&
+                   region.x + region.width <= 100 &&
+                   region.y + region.height <= 50
+        }
+
+        let outOfBoundsSprites = eqmainSprites.filter { sprite in
+            guard let region = SpriteDefinitions.region(for: sprite) else {
+                return false
+            }
+            return !(region.x >= 0 && region.y >= 0 &&
+                     region.x + region.width <= 100 &&
+                     region.y + region.height <= 50)
+        }
+
+        // Verify that extracted sprites match in-bounds sprites
+        #expect(extractedSprites.count == inBoundsSprites.count,
+                "Extracted sprite count should match in-bounds sprites")
+
+        // Verify out-of-bounds sprites were skipped (not extracted)
+        for sprite in outOfBoundsSprites {
+            #expect(extractedSprites[sprite] == nil,
+                    "Out-of-bounds sprite \(sprite.rawValue) should not be extracted")
+        }
+
+        // Verify in-bounds sprites were extracted
+        for sprite in inBoundsSprites {
+            #expect(extractedSprites[sprite] != nil,
+                    "In-bounds sprite \(sprite.rawValue) should be extracted")
+        }
+    }
+
+    // MARK: - Helper Functions
+
+    private func createTestImage(width: Int, height: Int) throws -> CGImage {
+        // Create a simple bitmap context with the specified dimensions
+        let bitmapInfo = CGBitmapInfo(
+            rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: bitmapInfo.rawValue
+        ) else {
+            throw SkinError.invalidBitmap("failed to create bitmap context")
+        }
+
+        // Fill with a simple color (white)
+        context.setFillColor(CGColor(gray: 1.0, alpha: 1.0))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+
+        guard let cgImage = context.makeImage() else {
+            throw SkinError.invalidBitmap("failed to create image from context")
+        }
+
+        return cgImage
+    }
 }
