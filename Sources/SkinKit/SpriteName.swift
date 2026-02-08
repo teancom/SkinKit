@@ -265,6 +265,46 @@ public enum SpriteName: String, CaseIterable, Sendable {
     case playlistCloseSelected = "PLAYLIST_CLOSE_SELECTED"
     case playlistCollapseSelected = "PLAYLIST_COLLAPSE_SELECTED"
     case playlistExpandSelected = "PLAYLIST_EXPAND_SELECTED"
+
+    // MARK: - Equalizer Window (EQMAIN.BMP)
+
+    case eqWindowBackground = "EQ_WINDOW_BACKGROUND"
+    case eqTitleBar = "EQ_TITLE_BAR"
+    case eqTitleBarSelected = "EQ_TITLE_BAR_SELECTED"
+    case eqSliderBackground = "EQ_SLIDER_BACKGROUND"
+    case eqSliderThumb = "EQ_SLIDER_THUMB"
+    case eqSliderThumbSelected = "EQ_SLIDER_THUMB_SELECTED"
+    case eqCloseButton = "EQ_CLOSE_BUTTON"
+    case eqCloseButtonActive = "EQ_CLOSE_BUTTON_ACTIVE"
+    case eqMaximizeButtonActiveFallback = "EQ_MAXIMIZE_BUTTON_ACTIVE_FALLBACK"
+    case eqOnButton = "EQ_ON_BUTTON"
+    case eqOnButtonDepressed = "EQ_ON_BUTTON_DEPRESSED"
+    case eqOnButtonSelected = "EQ_ON_BUTTON_SELECTED"
+    case eqOnButtonSelectedDepressed = "EQ_ON_BUTTON_SELECTED_DEPRESSED"
+    case eqAutoButton = "EQ_AUTO_BUTTON"
+    case eqAutoButtonDepressed = "EQ_AUTO_BUTTON_DEPRESSED"
+    case eqAutoButtonSelected = "EQ_AUTO_BUTTON_SELECTED"
+    case eqAutoButtonSelectedDepressed = "EQ_AUTO_BUTTON_SELECTED_DEPRESSED"
+    case eqGraphBackground = "EQ_GRAPH_BACKGROUND"
+    case eqGraphLineColors = "EQ_GRAPH_LINE_COLORS"
+    case eqPresetsButton = "EQ_PRESETS_BUTTON"
+    case eqPresetsButtonSelected = "EQ_PRESETS_BUTTON_SELECTED"
+    case eqPreampLine = "EQ_PREAMP_LINE"
+
+    // MARK: - Equalizer Windowshade (EQ_EX.BMP)
+
+    case eqShadeBackgroundSelected = "EQ_SHADE_BACKGROUND_SELECTED"
+    case eqShadeBackground = "EQ_SHADE_BACKGROUND"
+    case eqShadeVolumeSliderLeft = "EQ_SHADE_VOLUME_SLIDER_LEFT"
+    case eqShadeVolumeSliderCenter = "EQ_SHADE_VOLUME_SLIDER_CENTER"
+    case eqShadeVolumeSliderRight = "EQ_SHADE_VOLUME_SLIDER_RIGHT"
+    case eqShadeBalanceSliderLeft = "EQ_SHADE_BALANCE_SLIDER_LEFT"
+    case eqShadeBalanceSliderCenter = "EQ_SHADE_BALANCE_SLIDER_CENTER"
+    case eqShadeBalanceSliderRight = "EQ_SHADE_BALANCE_SLIDER_RIGHT"
+    case eqMaximizeButtonActive = "EQ_MAXIMIZE_BUTTON_ACTIVE"
+    case eqMinimizeButtonActive = "EQ_MINIMIZE_BUTTON_ACTIVE"
+    case eqShadeCloseButton = "EQ_SHADE_CLOSE_BUTTON"
+    case eqShadeCloseButtonActive = "EQ_SHADE_CLOSE_BUTTON_ACTIVE"
 }
 
 // MARK: - Character Sprite Lookup
