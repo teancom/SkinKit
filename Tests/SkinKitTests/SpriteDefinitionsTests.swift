@@ -159,4 +159,109 @@ struct SpriteDefinitionsTests {
             #expect(region != nil, "PLEDIT sprite \(sprite.rawValue) should have a region")
         }
     }
+
+    @Test("EQ sprites are mapped to correct BMP files")
+    func eqSpritesAreMappedToCorrectBmpFiles() {
+        // EQMAIN sprites
+        let eqmainSprites = SpriteDefinitions.sprites(in: .eqmain)
+        #expect(eqmainSprites.count == 22, "EQMAIN file should have 22 sprites")
+        #expect(eqmainSprites.contains(.eqWindowBackground))
+        #expect(eqmainSprites.contains(.eqTitleBar))
+        #expect(eqmainSprites.contains(.eqSliderBackground))
+        #expect(eqmainSprites.contains(.eqOnButton))
+        #expect(eqmainSprites.contains(.eqPreampLine))
+
+        // EQ_EX sprites
+        let eqExSprites = SpriteDefinitions.sprites(in: .eqEx)
+        #expect(eqExSprites.count == 12, "EQ_EX file should have 12 sprites")
+        #expect(eqExSprites.contains(.eqShadeBackground))
+        #expect(eqExSprites.contains(.eqShadeVolumeSliderLeft))
+        #expect(eqExSprites.contains(.eqMaximizeButtonActive))
+        #expect(eqExSprites.contains(.eqShadeCloseButtonActive))
+
+        // Total EQ sprites: 22 + 12 = 34
+        #expect(eqmainSprites.count + eqExSprites.count == 34)
+    }
+
+    @Test("EQ sprite regions have valid coordinates")
+    func eqSpriteRegionsHaveValidCoordinates() {
+        // EQMAIN sprites
+        let eqWindowBackground = SpriteDefinitions.region(for: .eqWindowBackground)
+        #expect(eqWindowBackground?.x == 0)
+        #expect(eqWindowBackground?.y == 0)
+        #expect(eqWindowBackground?.width == 275)
+        #expect(eqWindowBackground?.height == 116)
+
+        let eqSliderBackground = SpriteDefinitions.region(for: .eqSliderBackground)
+        #expect(eqSliderBackground?.x == 13)
+        #expect(eqSliderBackground?.y == 164)
+        #expect(eqSliderBackground?.width == 209)
+        #expect(eqSliderBackground?.height == 129)
+
+        let eqOnButton = SpriteDefinitions.region(for: .eqOnButton)
+        #expect(eqOnButton?.x == 10)
+        #expect(eqOnButton?.y == 119)
+        #expect(eqOnButton?.width == 26)
+        #expect(eqOnButton?.height == 12)
+
+        let eqGraphBackground = SpriteDefinitions.region(for: .eqGraphBackground)
+        #expect(eqGraphBackground?.x == 0)
+        #expect(eqGraphBackground?.y == 294)
+        #expect(eqGraphBackground?.width == 113)
+        #expect(eqGraphBackground?.height == 19)
+
+        let eqGraphLineColors = SpriteDefinitions.region(for: .eqGraphLineColors)
+        #expect(eqGraphLineColors?.x == 115)
+        #expect(eqGraphLineColors?.y == 294)
+        #expect(eqGraphLineColors?.width == 1)
+        #expect(eqGraphLineColors?.height == 19)
+
+        // EQ_EX sprites
+        let eqShadeBackground = SpriteDefinitions.region(for: .eqShadeBackground)
+        #expect(eqShadeBackground?.x == 0)
+        #expect(eqShadeBackground?.y == 15)
+        #expect(eqShadeBackground?.width == 275)
+        #expect(eqShadeBackground?.height == 14)
+
+        let eqMaximizeButtonActive = SpriteDefinitions.region(for: .eqMaximizeButtonActive)
+        #expect(eqMaximizeButtonActive?.x == 1)
+        #expect(eqMaximizeButtonActive?.y == 38)
+        #expect(eqMaximizeButtonActive?.width == 9)
+        #expect(eqMaximizeButtonActive?.height == 9)
+
+        let eqShadeCloseButtonActive = SpriteDefinitions.region(for: .eqShadeCloseButtonActive)
+        #expect(eqShadeCloseButtonActive?.x == 11)
+        #expect(eqShadeCloseButtonActive?.y == 47)
+        #expect(eqShadeCloseButtonActive?.width == 9)
+        #expect(eqShadeCloseButtonActive?.height == 9)
+    }
+
+    @Test("All EQ sprites have regions defined")
+    func allEqSpritesHaveRegionsDefined() {
+        let eqmainSprites = SpriteDefinitions.sprites(in: .eqmain)
+        for sprite in eqmainSprites {
+            let region = SpriteDefinitions.region(for: sprite)
+            #expect(region != nil, "EQMAIN sprite \(sprite.rawValue) should have a region")
+        }
+
+        let eqExSprites = SpriteDefinitions.sprites(in: .eqEx)
+        for sprite in eqExSprites {
+            let region = SpriteDefinitions.region(for: sprite)
+            #expect(region != nil, "EQ_EX sprite \(sprite.rawValue) should have a region")
+        }
+    }
+
+    @Test("bmpFile returns correct files for EQ sprites")
+    func bmpFileReturnsCorrectFilesForEqSprites() {
+        // EQMAIN sprites
+        #expect(SpriteDefinitions.bmpFile(for: .eqWindowBackground) == .eqmain)
+        #expect(SpriteDefinitions.bmpFile(for: .eqSliderBackground) == .eqmain)
+        #expect(SpriteDefinitions.bmpFile(for: .eqOnButton) == .eqmain)
+        #expect(SpriteDefinitions.bmpFile(for: .eqPreampLine) == .eqmain)
+
+        // EQ_EX sprites
+        #expect(SpriteDefinitions.bmpFile(for: .eqShadeBackground) == .eqEx)
+        #expect(SpriteDefinitions.bmpFile(for: .eqMaximizeButtonActive) == .eqEx)
+        #expect(SpriteDefinitions.bmpFile(for: .eqShadeCloseButtonActive) == .eqEx)
+    }
 }

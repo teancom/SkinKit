@@ -136,8 +136,9 @@ struct SpriteNameTests {
         #expect(SpriteName.playlistCloseSelected.rawValue == "PLAYLIST_CLOSE_SELECTED")
     }
 
-    @Test("SpriteName total count includes PLEDIT sprites")
-    func spriteNameTotalCountIncludesPleditSprites() {
-        #expect(SpriteName.allCases.count == 219)
+    @Test("SpriteName total count includes PLEDIT and EQ sprites")
+    func spriteNameTotalCountIncludesPleditAndEqSprites() {
+        // 219 original sprites + 34 EQ sprites = 253 total
+        #expect(SpriteName.allCases.count == 253)
     }
 }
