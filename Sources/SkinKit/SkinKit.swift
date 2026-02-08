@@ -233,6 +233,66 @@ public actor SkinLoader {
         return try BMPLoader.extractSprites(from: data, file: .pledit)
     }
 
+    private func loadEqmainFallback(from url: URL) async throws -> [SpriteName: CGImage] {
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-\(UUID().uuidString)")
+        defer { try? fileManager.removeItem(at: tempDir) }
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-o", "-qq", url.path, "-d", tempDir.path]
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw SkinError.invalidArchive("Failed to extract fallback skin")
+        }
+
+        let skinDir = try findSkinDirectory(in: tempDir)
+        let files = try fileManager.contentsOfDirectory(at: skinDir, includingPropertiesForKeys: nil)
+        let fileMap = Dictionary(
+            files.map { ($0.lastPathComponent.uppercased(), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        guard let eqmainURL = fileMap["EQMAIN.BMP"],
+              let data = try? Data(contentsOf: eqmainURL) else {
+            return [:]
+        }
+
+        return try BMPLoader.extractSprites(from: data, file: .eqmain)
+    }
+
+    private func loadEqExFallback(from url: URL) async throws -> [SpriteName: CGImage] {
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-\(UUID().uuidString)")
+        defer { try? fileManager.removeItem(at: tempDir) }
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-o", "-qq", url.path, "-d", tempDir.path]
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw SkinError.invalidArchive("Failed to extract fallback skin")
+        }
+
+        let skinDir = try findSkinDirectory(in: tempDir)
+        let files = try fileManager.contentsOfDirectory(at: skinDir, includingPropertiesForKeys: nil)
+        let fileMap = Dictionary(
+            files.map { ($0.lastPathComponent.uppercased(), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        guard let eqExURL = fileMap["EQ_EX.BMP"],
+              let data = try? Data(contentsOf: eqExURL) else {
+            return [:]
+        }
+
+        return try BMPLoader.extractSprites(from: data, file: .eqEx)
+    }
+
     private func loadFromDirectory(_ directory: URL) async throws -> SkinData {
         var allSprites: [SpriteName: CGImage] = [:]
         var config = SkinConfig.default
@@ -277,6 +337,39 @@ public actor SkinLoader {
                     }
                 } catch {
                     // Fallback is best-effort; continue without PLEDIT sprites
+                }
+            }
+        }
+
+        // Fallback: if no EQMAIN sprites were loaded, try loading from base skin
+        if allSprites[.eqWindowBackground] == nil {
+            if let baseURL = fallbackSkinURL {
+                do {
+                    let baseSkinSprites = try await loadEqmainFallback(from: baseURL)
+                    for (key, value) in baseSkinSprites {
+                        if allSprites[key] == nil {
+                            allSprites[key] = value
+                        }
+                    }
+                } catch {
+                    // Fallback is best-effort
+                }
+            }
+        }
+
+        // Fallback: if no EQ_EX sprites were loaded, try loading from base skin
+        // This is independent of EQMAIN — a skin can have EQMAIN but not EQ_EX
+        if allSprites[.eqShadeBackground] == nil {
+            if let baseURL = fallbackSkinURL {
+                do {
+                    let baseSkinSprites = try await loadEqExFallback(from: baseURL)
+                    for (key, value) in baseSkinSprites {
+                        if allSprites[key] == nil {
+                            allSprites[key] = value
+                        }
+                    }
+                } catch {
+                    // Fallback is best-effort
                 }
             }
         }
