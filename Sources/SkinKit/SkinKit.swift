@@ -196,6 +196,22 @@ public actor SkinLoader {
             let errorMessage = String(data: errorData, encoding: .utf8) ?? "unknown error"
             throw SkinError.invalidArchive(errorMessage)
         }
+
+        // Verify no extracted files escaped the destination (zip slip protection)
+        try validateExtractedPaths(in: destination)
+    }
+
+    /// Verify that all extracted files are within the destination directory.
+    /// Protects against zip slip attacks where entries contain "../" path components.
+    private func validateExtractedPaths(in directory: URL) throws {
+        let resolvedBase = directory.standardizedFileURL.path
+        let enumerator = fileManager.enumerator(at: directory, includingPropertiesForKeys: nil)
+        while let fileURL = enumerator?.nextObject() as? URL {
+            let resolvedPath = fileURL.standardizedFileURL.path
+            guard resolvedPath.hasPrefix(resolvedBase) else {
+                throw SkinError.invalidArchive("archive entry escaped destination directory: \(fileURL.lastPathComponent)")
+            }
+        }
     }
 
     private func loadPleditFallback(from url: URL) async throws -> [SpriteName: CGImage] {

@@ -9,6 +9,11 @@ public struct BMPLoader: Sendable {
     /// - Parameter data: Raw BMP file data.
     /// - Returns: CGImage if loading succeeds.
     /// - Throws: SkinError if the data is invalid.
+    /// Maximum allowed dimension for skin BMPs (pixels per axis).
+    /// The largest legitimate Winamp sprite sheet is ~800px wide. 4096 provides
+    /// generous headroom while still rejecting decompression bombs.
+    private static let maxDimension = 4096
+
     public static func load(from data: Data) throws -> CGImage {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             throw SkinError.invalidBitmap("failed to create image source")
@@ -16,6 +21,14 @@ public struct BMPLoader: Sendable {
 
         guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw SkinError.invalidBitmap("failed to create image from source")
+        }
+
+        // Guard against decompression bombs from malicious/corrupt skin files
+        guard image.width > 0, image.height > 0,
+              image.width <= maxDimension, image.height <= maxDimension else {
+            throw SkinError.invalidBitmap(
+                "image dimensions \(image.width)x\(image.height) exceed maximum \(maxDimension)x\(maxDimension)"
+            )
         }
 
         return image
