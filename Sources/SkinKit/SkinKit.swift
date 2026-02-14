@@ -214,42 +214,11 @@ public actor SkinLoader {
         }
     }
 
-    private func loadPleditFallback(from url: URL) async throws -> [SpriteName: CGImage] {
-        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-\(UUID().uuidString)")
-        defer { try? fileManager.removeItem(at: tempDir) }
-
-        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
-
-        // Extract the base skin archive
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-        process.arguments = ["-o", "-qq", url.path, "-d", tempDir.path]
-        try process.run()
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            throw SkinError.invalidArchive("Failed to extract fallback skin")
-        }
-
-        // Find the extracted skin directory
-        let skinDir = try findSkinDirectory(in: tempDir)
-
-        // Find PLEDIT.BMP (case-insensitive)
-        let files = try fileManager.contentsOfDirectory(at: skinDir, includingPropertiesForKeys: nil)
-        let fileMap = Dictionary(
-            files.map { ($0.lastPathComponent.uppercased(), $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-
-        guard let pleditURL = fileMap["PLEDIT.BMP"],
-              let data = try? Data(contentsOf: pleditURL) else {
-            return [:]
-        }
-
-        return try BMPLoader.extractSprites(from: data, file: .pledit)
-    }
-
-    private func loadEqmainFallback(from url: URL) async throws -> [SpriteName: CGImage] {
+    /// Extract sprites for a single BMP file from a fallback skin archive.
+    private func loadFallbackSprites(
+        from url: URL,
+        bmpFile: SpriteDefinitions.BMPFile
+    ) async throws -> [SpriteName: CGImage] {
         let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-\(UUID().uuidString)")
         defer { try? fileManager.removeItem(at: tempDir) }
         try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -271,42 +240,12 @@ public actor SkinLoader {
             uniquingKeysWith: { first, _ in first }
         )
 
-        guard let eqmainURL = fileMap["EQMAIN.BMP"],
-              let data = try? Data(contentsOf: eqmainURL) else {
+        guard let fileURL = fileMap[bmpFile.filename],
+              let data = try? Data(contentsOf: fileURL) else {
             return [:]
         }
 
-        return try BMPLoader.extractSprites(from: data, file: .eqmain)
-    }
-
-    private func loadEqExFallback(from url: URL) async throws -> [SpriteName: CGImage] {
-        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-\(UUID().uuidString)")
-        defer { try? fileManager.removeItem(at: tempDir) }
-        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-        process.arguments = ["-o", "-qq", url.path, "-d", tempDir.path]
-        try process.run()
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            throw SkinError.invalidArchive("Failed to extract fallback skin")
-        }
-
-        let skinDir = try findSkinDirectory(in: tempDir)
-        let files = try fileManager.contentsOfDirectory(at: skinDir, includingPropertiesForKeys: nil)
-        let fileMap = Dictionary(
-            files.map { ($0.lastPathComponent.uppercased(), $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-
-        guard let eqExURL = fileMap["EQ_EX.BMP"],
-              let data = try? Data(contentsOf: eqExURL) else {
-            return [:]
-        }
-
-        return try BMPLoader.extractSprites(from: data, file: .eqEx)
+        return try BMPLoader.extractSprites(from: data, file: bmpFile)
     }
 
     private func loadFromDirectory(_ directory: URL) async throws -> SkinData {
@@ -323,7 +262,7 @@ public actor SkinLoader {
         // Load each BMP file
         for bmpFile in SpriteDefinitions.BMPFile.allCases {
             let filename = bmpFile.filename
-            guard let fileURL = fileMap[filename] ?? fileMap[filename.lowercased()] else {
+            guard let fileURL = fileMap[filename] else {
                 // Optional files can be missing
                 continue
             }
@@ -345,7 +284,7 @@ public actor SkinLoader {
         if allSprites[.playlistTitleBar] == nil {
             if let baseURL = fallbackSkinURL {
                 do {
-                    let baseSkinSprites = try await loadPleditFallback(from: baseURL)
+                    let baseSkinSprites = try await loadFallbackSprites(from: baseURL, bmpFile: .pledit)
                     for (key, value) in baseSkinSprites {
                         if allSprites[key] == nil {
                             allSprites[key] = value
@@ -361,7 +300,7 @@ public actor SkinLoader {
         if allSprites[.eqWindowBackground] == nil {
             if let baseURL = fallbackSkinURL {
                 do {
-                    let baseSkinSprites = try await loadEqmainFallback(from: baseURL)
+                    let baseSkinSprites = try await loadFallbackSprites(from: baseURL, bmpFile: .eqmain)
                     for (key, value) in baseSkinSprites {
                         if allSprites[key] == nil {
                             allSprites[key] = value
@@ -378,7 +317,7 @@ public actor SkinLoader {
         if allSprites[.eqShadeBackground] == nil {
             if let baseURL = fallbackSkinURL {
                 do {
-                    let baseSkinSprites = try await loadEqExFallback(from: baseURL)
+                    let baseSkinSprites = try await loadFallbackSprites(from: baseURL, bmpFile: .eqEx)
                     for (key, value) in baseSkinSprites {
                         if allSprites[key] == nil {
                             allSprites[key] = value
@@ -399,7 +338,7 @@ public actor SkinLoader {
         }
 
         // Load pledit.txt if present
-        if let pleditURL = fileMap["PLEDIT.TXT"] ?? fileMap["pledit.txt"],
+        if let pleditURL = fileMap["PLEDIT.TXT"],
            let content = try? String(contentsOf: pleditURL, encoding: .utf8) {
             let parser = INIParser(content: content)
             config = parser.extractSkinConfig()
