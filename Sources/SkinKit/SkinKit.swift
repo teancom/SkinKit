@@ -96,6 +96,11 @@ public actor SkinLoader {
 
     public init() {}
 
+    /// Create a loader with a custom fallback skin URL (for testing).
+    public init(fallbackSkinURL: URL?) {
+        self.fallbackSkinURL = fallbackSkinURL
+    }
+
     /// Load a skin from a file URL.
     /// - Parameter url: URL to the WSZ skin file
     /// - Returns: Extracted skin data with sprites and configuration
