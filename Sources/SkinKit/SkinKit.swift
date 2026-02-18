@@ -1,6 +1,5 @@
 import Foundation
 import CoreGraphics
-import Compression
 
 /// SkinKit provides parsing and sprite extraction for Winamp-style WSZ skin files.
 ///
