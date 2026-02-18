@@ -214,11 +214,14 @@ public actor SkinLoader {
         }
     }
 
-    /// Extract sprites for a single BMP file from a fallback skin archive.
+    /// Extract sprites for multiple BMP files from a fallback skin archive.
+    /// Extracts the ZIP once and loads all requested BMPs in one pass.
     private func loadFallbackSprites(
         from url: URL,
-        bmpFile: SpriteDefinitions.BMPFile
-    ) async throws -> [SpriteName: CGImage] {
+        bmpFiles: [SpriteDefinitions.BMPFile]
+    ) throws -> [SpriteName: CGImage] {
+        guard !bmpFiles.isEmpty else { return [:] }
+
         let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-\(UUID().uuidString)")
         defer { try? fileManager.removeItem(at: tempDir) }
         try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -240,12 +243,17 @@ public actor SkinLoader {
             uniquingKeysWith: { first, _ in first }
         )
 
-        guard let fileURL = fileMap[bmpFile.filename],
-              let data = try? Data(contentsOf: fileURL) else {
-            return [:]
+        var sprites: [SpriteName: CGImage] = [:]
+        for bmpFile in bmpFiles {
+            guard let fileURL = fileMap[bmpFile.filename],
+                  let data = try? Data(contentsOf: fileURL) else {
+                continue
+            }
+            if let extracted = try? BMPLoader.extractSprites(from: data, file: bmpFile) {
+                sprites.merge(extracted) { _, new in new }
+            }
         }
-
-        return try BMPLoader.extractSprites(from: data, file: bmpFile)
+        return sprites
     }
 
     private func loadFromDirectory(_ directory: URL) async throws -> SkinData {
@@ -280,51 +288,20 @@ public actor SkinLoader {
             }
         }
 
-        // Fallback: if no PLEDIT sprites were loaded, try loading from base skin
-        if allSprites[.playlistTitleBar] == nil {
-            if let baseURL = fallbackSkinURL {
-                do {
-                    let baseSkinSprites = try await loadFallbackSprites(from: baseURL, bmpFile: .pledit)
-                    for (key, value) in baseSkinSprites {
-                        if allSprites[key] == nil {
-                            allSprites[key] = value
-                        }
-                    }
-                } catch {
-                    // Fallback is best-effort; continue without PLEDIT sprites
-                }
-            }
-        }
+        // Fallback: load missing sprite sheets from the bundled base skin.
+        // Collect which BMPs are needed, then extract the base ZIP once.
+        if let baseURL = fallbackSkinURL {
+            var missingBMPs: [SpriteDefinitions.BMPFile] = []
+            if allSprites[.playlistTitleBar] == nil { missingBMPs.append(.pledit) }
+            if allSprites[.eqWindowBackground] == nil { missingBMPs.append(.eqmain) }
+            // EQ_EX is independent of EQMAIN — a skin can have EQMAIN but not EQ_EX
+            if allSprites[.eqShadeBackground] == nil { missingBMPs.append(.eqEx) }
 
-        // Fallback: if no EQMAIN sprites were loaded, try loading from base skin
-        if allSprites[.eqWindowBackground] == nil {
-            if let baseURL = fallbackSkinURL {
-                do {
-                    let baseSkinSprites = try await loadFallbackSprites(from: baseURL, bmpFile: .eqmain)
-                    for (key, value) in baseSkinSprites {
-                        if allSprites[key] == nil {
-                            allSprites[key] = value
-                        }
+            if !missingBMPs.isEmpty {
+                if let fallbackSprites = try? loadFallbackSprites(from: baseURL, bmpFiles: missingBMPs) {
+                    for (key, value) in fallbackSprites where allSprites[key] == nil {
+                        allSprites[key] = value
                     }
-                } catch {
-                    // Fallback is best-effort
-                }
-            }
-        }
-
-        // Fallback: if no EQ_EX sprites were loaded, try loading from base skin
-        // This is independent of EQMAIN — a skin can have EQMAIN but not EQ_EX
-        if allSprites[.eqShadeBackground] == nil {
-            if let baseURL = fallbackSkinURL {
-                do {
-                    let baseSkinSprites = try await loadFallbackSprites(from: baseURL, bmpFile: .eqEx)
-                    for (key, value) in baseSkinSprites {
-                        if allSprites[key] == nil {
-                            allSprites[key] = value
-                        }
-                    }
-                } catch {
-                    // Fallback is best-effort
                 }
             }
         }
