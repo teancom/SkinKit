@@ -313,8 +313,8 @@ public enum SpriteDefinitions {
         .mainPlayingIndicator: SpriteRegion(x: 0, y: 0, width: 9, height: 9),
         .mainPausedIndicator: SpriteRegion(x: 9, y: 0, width: 9, height: 9),
         .mainStoppedIndicator: SpriteRegion(x: 18, y: 0, width: 9, height: 9),
-        .mainNotWorkingIndicator: SpriteRegion(x: 36, y: 0, width: 9, height: 9),
-        .mainWorkingIndicator: SpriteRegion(x: 39, y: 0, width: 9, height: 9),
+        .mainNotWorkingIndicator: SpriteRegion(x: 27, y: 0, width: 9, height: 9),
+        .mainWorkingIndicator: SpriteRegion(x: 36, y: 0, width: 9, height: 9),
 
         // MONOSTER.BMP
         .mainStereo: SpriteRegion(x: 0, y: 12, width: 29, height: 12),
