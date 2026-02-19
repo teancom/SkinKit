@@ -305,6 +305,34 @@ public enum SpriteName: String, CaseIterable, Sendable {
     case eqMinimizeButtonActive = "EQ_MINIMIZE_BUTTON_ACTIVE"
     case eqShadeCloseButton = "EQ_SHADE_CLOSE_BUTTON"
     case eqShadeCloseButtonActive = "EQ_SHADE_CLOSE_BUTTON_ACTIVE"
+
+    // MARK: - Browse Window (GEN.BMP)
+
+    // GEN.BMP — Title bar (selected/focused state)
+    case genTopLeftSelected = "GEN_TOP_LEFT_SELECTED"
+    case genTopLeftEndSelected = "GEN_TOP_LEFT_END_SELECTED"
+    case genTopCenterFillSelected = "GEN_TOP_CENTER_FILL_SELECTED"
+    case genTopRightEndSelected = "GEN_TOP_RIGHT_END_SELECTED"
+    case genTopLeftRightFillSelected = "GEN_TOP_LEFT_RIGHT_FILL_SELECTED"
+    case genTopRightSelected = "GEN_TOP_RIGHT_SELECTED"
+
+    // GEN.BMP — Title bar (unselected/unfocused state)
+    case genTopLeft = "GEN_TOP_LEFT"
+    case genTopLeftEnd = "GEN_TOP_LEFT_END"
+    case genTopCenterFill = "GEN_TOP_CENTER_FILL"
+    case genTopRightEnd = "GEN_TOP_RIGHT_END"
+    case genTopLeftRightFill = "GEN_TOP_LEFT_RIGHT_FILL"
+    case genTopRight = "GEN_TOP_RIGHT"
+
+    // GEN.BMP — Bottom bar and edges
+    case genBottomLeft = "GEN_BOTTOM_LEFT"
+    case genBottomRight = "GEN_BOTTOM_RIGHT"
+    case genBottomFill = "GEN_BOTTOM_FILL"
+    case genMiddleLeft = "GEN_MIDDLE_LEFT"
+    case genMiddleLeftBottom = "GEN_MIDDLE_LEFT_BOTTOM"
+    case genMiddleRight = "GEN_MIDDLE_RIGHT"
+    case genMiddleRightBottom = "GEN_MIDDLE_RIGHT_BOTTOM"
+    case genCloseSelected = "GEN_CLOSE_SELECTED"
 }
 
 // MARK: - Character Sprite Lookup
