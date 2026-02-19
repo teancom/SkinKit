@@ -204,6 +204,18 @@ public enum SpriteDefinitions {
             .eqMaximizeButtonActive, .eqMinimizeButtonActive,
             .eqShadeCloseButton, .eqShadeCloseButtonActive,
         ],
+        .gen: [
+            .genTopLeftSelected, .genTopLeftEndSelected,
+            .genTopCenterFillSelected, .genTopRightEndSelected,
+            .genTopLeftRightFillSelected, .genTopRightSelected,
+            .genTopLeft, .genTopLeftEnd,
+            .genTopCenterFill, .genTopRightEnd,
+            .genTopLeftRightFill, .genTopRight,
+            .genBottomLeft, .genBottomRight, .genBottomFill,
+            .genMiddleLeft, .genMiddleLeftBottom,
+            .genMiddleRight, .genMiddleRightBottom,
+            .genCloseSelected,
+        ],
     ]
 
     private static func characterSprites() -> [SpriteName] {
@@ -520,5 +532,31 @@ public enum SpriteDefinitions {
         .eqMinimizeButtonActive: SpriteRegion(x: 1, y: 47, width: 9, height: 9),
         .eqShadeCloseButton: SpriteRegion(x: 11, y: 38, width: 9, height: 9),
         .eqShadeCloseButtonActive: SpriteRegion(x: 11, y: 47, width: 9, height: 9),
+
+        // GEN.BMP — Title bar (selected)
+        .genTopLeftSelected: SpriteRegion(x: 0, y: 0, width: 25, height: 20),
+        .genTopLeftEndSelected: SpriteRegion(x: 26, y: 0, width: 25, height: 20),
+        .genTopCenterFillSelected: SpriteRegion(x: 52, y: 0, width: 25, height: 20),
+        .genTopRightEndSelected: SpriteRegion(x: 78, y: 0, width: 25, height: 20),
+        .genTopLeftRightFillSelected: SpriteRegion(x: 104, y: 0, width: 25, height: 20),
+        .genTopRightSelected: SpriteRegion(x: 130, y: 0, width: 25, height: 20),
+
+        // GEN.BMP — Title bar (unselected)
+        .genTopLeft: SpriteRegion(x: 0, y: 21, width: 25, height: 20),
+        .genTopLeftEnd: SpriteRegion(x: 26, y: 21, width: 25, height: 20),
+        .genTopCenterFill: SpriteRegion(x: 52, y: 21, width: 25, height: 20),
+        .genTopRightEnd: SpriteRegion(x: 78, y: 21, width: 25, height: 20),
+        .genTopLeftRightFill: SpriteRegion(x: 104, y: 21, width: 25, height: 20),
+        .genTopRight: SpriteRegion(x: 130, y: 21, width: 25, height: 20),
+
+        // GEN.BMP — Bottom bar, edges, close button
+        .genBottomLeft: SpriteRegion(x: 0, y: 42, width: 125, height: 14),
+        .genBottomRight: SpriteRegion(x: 0, y: 57, width: 125, height: 14),
+        .genBottomFill: SpriteRegion(x: 127, y: 72, width: 25, height: 14),
+        .genMiddleLeft: SpriteRegion(x: 127, y: 42, width: 11, height: 29),
+        .genMiddleLeftBottom: SpriteRegion(x: 158, y: 42, width: 11, height: 24),
+        .genMiddleRight: SpriteRegion(x: 139, y: 42, width: 8, height: 29),
+        .genMiddleRightBottom: SpriteRegion(x: 170, y: 42, width: 8, height: 24),
+        .genCloseSelected: SpriteRegion(x: 148, y: 42, width: 9, height: 9),
     ]
 }
