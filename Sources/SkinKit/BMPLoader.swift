@@ -134,4 +134,75 @@ public struct BMPLoader: Sendable {
         let b = CGFloat(pixel[2]) / 255.0
         return CGColor(colorSpace: colorSpace, components: [r, g, b, 1.0])!
     }
+
+    /// Extract variable-width GEN.BMP font character sprites using pixel scanning.
+    ///
+    /// GEN.BMP contains two font rows:
+    /// - y=88: Selected/highlighted characters (A-Z)
+    /// - y=96: Normal/unhighlighted characters (A-Z)
+    ///
+    /// Characters have variable widths. Boundaries are detected by scanning for
+    /// the background color (sampled at x=0 of each row). Characters are separated
+    /// by 1-pixel gaps of background color.
+    ///
+    /// Based on Webamp's `genGenTextSprites()` algorithm.
+    public static func extractGenFontSprites(from image: CGImage) throws -> [SpriteName: CGImage] {
+        let letters: [Character] = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        let fontHeight = 7
+        let rows: [(y: Int, selected: Bool)] = [(88, true), (96, false)]
+
+        var sprites: [SpriteName: CGImage] = [:]
+
+        for (rowY, selected) in rows {
+            // Ensure the font row fits within the image
+            guard rowY + fontHeight <= image.height else { continue }
+
+            // Get background color at x=0
+            let bgColor = try readPixelColor(from: image, x: 0, y: rowY)
+            let bgComponents = bgColor.components ?? [0, 0, 0, 1]
+
+            var x = 1  // Start scanning after 1-pixel background margin
+
+            for letter in letters {
+                // Find end of character (next background pixel)
+                var nextBg = x
+                while nextBg < image.width {
+                    let pixelColor = try readPixelColor(from: image, x: nextBg, y: rowY)
+                    let pixelComponents = pixelColor.components ?? [0, 0, 0, 1]
+                    if colorsMatch(bgComponents, pixelComponents) {
+                        break
+                    }
+                    nextBg += 1
+                }
+
+                let charWidth = nextBg - x
+                guard charWidth > 0 else {
+                    x = nextBg + 1
+                    continue
+                }
+
+                let region = SpriteRegion(x: x, y: rowY, width: charWidth, height: fontHeight)
+                if let sprite = try? extractSprite(from: image, region: region),
+                   let spriteName = SpriteName.genFont(letter, selected: selected) {
+                    sprites[spriteName] = sprite
+                }
+
+                x = nextBg + 1  // Skip 1-pixel gap
+            }
+        }
+
+        return sprites
+    }
+
+    /// Compare two CGColor component arrays for approximate equality.
+    private static func colorsMatch(
+        _ a: [CGFloat],
+        _ b: [CGFloat],
+        tolerance: CGFloat = 0.01
+    ) -> Bool {
+        guard a.count >= 3, b.count >= 3 else { return false }
+        return abs(a[0] - b[0]) < tolerance
+            && abs(a[1] - b[1]) < tolerance
+            && abs(a[2] - b[2]) < tolerance
+    }
 }

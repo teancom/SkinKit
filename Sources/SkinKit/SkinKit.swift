@@ -47,9 +47,13 @@ public struct SkinData: Sendable {
     /// Configuration from pledit.txt (colors, font).
     public let config: SkinConfig
 
-    public init(sprites: [SpriteName: CGImage], config: SkinConfig) {
+    /// Colors extracted from GENEX.BMP (optional).
+    public let genExColors: GenExColors?
+
+    public init(sprites: [SpriteName: CGImage], config: SkinConfig, genExColors: GenExColors? = nil) {
         self.sprites = sprites
         self.config = config
+        self.genExColors = genExColors
     }
 
     /// Get a sprite by name.
@@ -260,9 +264,59 @@ public actor SkinLoader {
         return sprites
     }
 
+    /// Load fallback GENEX colors and GEN font from the base skin.
+    /// Performs a separate extraction pass for GENEX-specific data not covered by loadFallbackSprites.
+    private func loadFallbackExtras(
+        from url: URL,
+        needsGenEx: Bool,
+        needsGenFont: Bool
+    ) throws -> (genExColors: GenExColors?, genImage: CGImage?) {
+        guard needsGenEx || needsGenFont else { return (nil, nil) }
+
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("skinkit-fallback-extras-\(UUID().uuidString)")
+        defer { try? fileManager.removeItem(at: tempDir) }
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-o", "-qq", url.path, "-d", tempDir.path]
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw SkinError.invalidArchive("Failed to extract fallback skin")
+        }
+
+        let skinDir = try findSkinDirectory(in: tempDir)
+        let files = try fileManager.contentsOfDirectory(at: skinDir, includingPropertiesForKeys: nil)
+        let fileMap = Dictionary(
+            files.map { ($0.lastPathComponent.uppercased(), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        var genExColors: GenExColors? = nil
+        var genImg: CGImage? = nil
+
+        if needsGenEx,
+           let genexURL = fileMap["GENEX.BMP"],
+           let genexData = try? Data(contentsOf: genexURL),
+           let genexImage = try? BMPLoader.load(from: genexData) {
+            genExColors = try? GenExColors.extract(from: genexImage)
+        }
+
+        if needsGenFont,
+           let genURL = fileMap["GEN.BMP"],
+           let genData = try? Data(contentsOf: genURL) {
+            genImg = try? BMPLoader.load(from: genData)
+        }
+
+        return (genExColors, genImg)
+    }
+
     private func loadFromDirectory(_ directory: URL) async throws -> SkinData {
         var allSprites: [SpriteName: CGImage] = [:]
         var config = SkinConfig.default
+        var genImage: CGImage? = nil
 
         // Get list of files (case-insensitive matching)
         let files = try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
@@ -286,6 +340,11 @@ public actor SkinLoader {
             do {
                 let sprites = try BMPLoader.extractSprites(from: data, file: bmpFile)
                 allSprites.merge(sprites) { _, new in new }
+
+                // Capture raw GEN image for font extraction
+                if bmpFile == .gen {
+                    genImage = try? BMPLoader.load(from: data)
+                }
             } catch {
                 // Continue loading other files even if one fails
                 continue
@@ -311,6 +370,48 @@ public actor SkinLoader {
             }
         }
 
+        // Extract GENEX.BMP colors from the current skin
+        // fileMap includes ALL extracted files (not just known BMPFile cases),
+        // so GENEX.BMP is accessible via fileMap even though it has no BMPFile enum case.
+        var genExColors: GenExColors? = nil
+        if let genexURL = fileMap["GENEX.BMP"],
+           let genexData = try? Data(contentsOf: genexURL),
+           let genexImage = try? BMPLoader.load(from: genexData) {
+            genExColors = try? GenExColors.extract(from: genexImage)
+        }
+
+        // Extract GEN font characters (variable-width, pixel-scanned)
+        if let genImg = genImage {
+            if let fontSprites = try? BMPLoader.extractGenFontSprites(from: genImg) {
+                allSprites.merge(fontSprites) { _, new in new }
+            }
+        }
+
+        // Fallback: load GENEX colors and GEN font from base skin if missing
+        // Uses a single extraction pass to avoid extracting the base WSZ twice.
+        if let baseURL = fallbackSkinURL {
+            let needsGenEx = genExColors == nil
+            let needsGenFont = genImage == nil
+            if needsGenEx || needsGenFont {
+                if let extras = try? loadFallbackExtras(
+                    from: baseURL,
+                    needsGenEx: needsGenEx,
+                    needsGenFont: needsGenFont
+                ) {
+                    if needsGenEx, let colors = extras.genExColors {
+                        genExColors = colors
+                    }
+                    if needsGenFont, let fallbackGenImg = extras.genImage {
+                        genImage = fallbackGenImg
+                        // Extract font sprites from fallback GEN image
+                        if let fontSprites = try? BMPLoader.extractGenFontSprites(from: fallbackGenImg) {
+                            allSprites.merge(fontSprites) { existing, _ in existing }
+                        }
+                    }
+                }
+            }
+        }
+
         // Verify required sprites exist
         let required: [SpriteName] = [.mainWindowBackground]
         for sprite in required {
@@ -326,6 +427,6 @@ public actor SkinLoader {
             config = parser.extractSkinConfig()
         }
 
-        return SkinData(sprites: allSprites, config: config)
+        return SkinData(sprites: allSprites, config: config, genExColors: genExColors)
     }
 }
