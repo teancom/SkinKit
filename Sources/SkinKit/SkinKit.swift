@@ -300,6 +300,7 @@ public actor SkinLoader {
             if allSprites[.eqWindowBackground] == nil { missingBMPs.append(.eqmain) }
             // EQ_EX is independent of EQMAIN — a skin can have EQMAIN but not EQ_EX
             if allSprites[.eqShadeBackground] == nil { missingBMPs.append(.eqEx) }
+            if allSprites[.genTopLeftSelected] == nil { missingBMPs.append(.gen) }
 
             if !missingBMPs.isEmpty {
                 if let fallbackSprites = try? loadFallbackSprites(from: baseURL, bmpFiles: missingBMPs) {
