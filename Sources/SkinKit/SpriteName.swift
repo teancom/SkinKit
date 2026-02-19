@@ -333,6 +333,62 @@ public enum SpriteName: String, CaseIterable, Sendable {
     case genMiddleRight = "GEN_MIDDLE_RIGHT"
     case genMiddleRightBottom = "GEN_MIDDLE_RIGHT_BOTTOM"
     case genCloseSelected = "GEN_CLOSE_SELECTED"
+
+    // GEN.BMP — Font characters (unhighlighted/normal, y=96)
+    case genFontA = "GEN_FONT_A"
+    case genFontB = "GEN_FONT_B"
+    case genFontC = "GEN_FONT_C"
+    case genFontD = "GEN_FONT_D"
+    case genFontE = "GEN_FONT_E"
+    case genFontF = "GEN_FONT_F"
+    case genFontG = "GEN_FONT_G"
+    case genFontH = "GEN_FONT_H"
+    case genFontI = "GEN_FONT_I"
+    case genFontJ = "GEN_FONT_J"
+    case genFontK = "GEN_FONT_K"
+    case genFontL = "GEN_FONT_L"
+    case genFontM = "GEN_FONT_M"
+    case genFontN = "GEN_FONT_N"
+    case genFontO = "GEN_FONT_O"
+    case genFontP = "GEN_FONT_P"
+    case genFontQ = "GEN_FONT_Q"
+    case genFontR = "GEN_FONT_R"
+    case genFontS = "GEN_FONT_S"
+    case genFontT = "GEN_FONT_T"
+    case genFontU = "GEN_FONT_U"
+    case genFontV = "GEN_FONT_V"
+    case genFontW = "GEN_FONT_W"
+    case genFontX = "GEN_FONT_X"
+    case genFontY = "GEN_FONT_Y"
+    case genFontZ = "GEN_FONT_Z"
+
+    // GEN.BMP — Font characters (highlighted/selected, y=88)
+    case genFontASelected = "GEN_FONT_A_SELECTED"
+    case genFontBSelected = "GEN_FONT_B_SELECTED"
+    case genFontCSelected = "GEN_FONT_C_SELECTED"
+    case genFontDSelected = "GEN_FONT_D_SELECTED"
+    case genFontESelected = "GEN_FONT_E_SELECTED"
+    case genFontFSelected = "GEN_FONT_F_SELECTED"
+    case genFontGSelected = "GEN_FONT_G_SELECTED"
+    case genFontHSelected = "GEN_FONT_H_SELECTED"
+    case genFontISelected = "GEN_FONT_I_SELECTED"
+    case genFontJSelected = "GEN_FONT_J_SELECTED"
+    case genFontKSelected = "GEN_FONT_K_SELECTED"
+    case genFontLSelected = "GEN_FONT_L_SELECTED"
+    case genFontMSelected = "GEN_FONT_M_SELECTED"
+    case genFontNSelected = "GEN_FONT_N_SELECTED"
+    case genFontOSelected = "GEN_FONT_O_SELECTED"
+    case genFontPSelected = "GEN_FONT_P_SELECTED"
+    case genFontQSelected = "GEN_FONT_Q_SELECTED"
+    case genFontRSelected = "GEN_FONT_R_SELECTED"
+    case genFontSSelected = "GEN_FONT_S_SELECTED"
+    case genFontTSelected = "GEN_FONT_T_SELECTED"
+    case genFontUSelected = "GEN_FONT_U_SELECTED"
+    case genFontVSelected = "GEN_FONT_V_SELECTED"
+    case genFontWSelected = "GEN_FONT_W_SELECTED"
+    case genFontXSelected = "GEN_FONT_X_SELECTED"
+    case genFontYSelected = "GEN_FONT_Y_SELECTED"
+    case genFontZSelected = "GEN_FONT_Z_SELECTED"
 }
 
 // MARK: - Character Sprite Lookup
@@ -343,6 +399,17 @@ public extension SpriteName {
     /// Returns the SpriteName for a character, if available.
     static func character(_ char: Character) -> SpriteName? {
         characterMap[char]
+    }
+
+    /// Look up a GEN font sprite for a given uppercase letter.
+    /// Returns nil for non-letter characters.
+    static func genFont(_ character: Character, selected: Bool) -> SpriteName? {
+        guard character.isLetter, character.isASCII else { return nil }
+        let upper = character.uppercased()
+        // Build raw value string e.g. "GEN_FONT_A" or "GEN_FONT_A_SELECTED"
+        let suffix = selected ? "_SELECTED" : ""
+        let rawValue = "GEN_FONT_\(upper)\(suffix)"
+        return SpriteName(rawValue: rawValue)
     }
 
     /// All available character sprites.
