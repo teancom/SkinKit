@@ -68,6 +68,19 @@ public struct BMPLoader: Sendable {
         let source = try load(from: data)
         let sprites = SpriteDefinitions.sprites(in: file)
 
+        // For TEXT.BMP, extract the space character first and read ALL its rendered
+        // RGB colors to get the complete background palette. The space character is
+        // guaranteed to be 100% background pixels. Using all colors (not just one)
+        // handles dithered backgrounds where multiple colors alternate.
+        var textBgColors: Set<RGB>?
+        if file == .text,
+           let spaceRegion = SpriteDefinitions.region(for: .characterSpace),
+           spaceRegion.x + spaceRegion.width <= source.width,
+           spaceRegion.y + spaceRegion.height <= source.height,
+           let spaceSprite = try? extractSprite(from: source, region: spaceRegion) {
+            textBgColors = readAllRenderedRGB(from: spaceSprite)
+        }
+
         var result: [SpriteName: CGImage] = [:]
 
         for sprite in sprites {
@@ -84,7 +97,13 @@ public struct BMPLoader: Sendable {
             }
 
             do {
-                let image = try extractSprite(from: source, region: region)
+                var image = try extractSprite(from: source, region: region)
+                // Make TEXT.BMP character backgrounds transparent using the
+                // background palette sampled from the space character sprite.
+                if let bgColors = textBgColors,
+                   let transparent = makeBackgroundTransparent(image, backgroundColors: bgColors) {
+                    image = transparent
+                }
                 result[sprite] = image
             } catch {
                 // Continue with other sprites even if one fails
@@ -157,9 +176,16 @@ public struct BMPLoader: Sendable {
             // Ensure the font row fits within the image
             guard rowY + fontHeight <= image.height else { continue }
 
-            // Get background color at x=0
+            // Get background color at x=0 via CGColor components (for boundary scanning)
             let bgColor = try readPixelColor(from: image, x: 0, y: rowY)
             let bgComponents = bgColor.components ?? [0, 0, 0, 1]
+
+            // Also get the background as rendered RGB colors (for transparency removal).
+            // Extract a 1px-wide strip at x=0 and read all its rendered colors through the
+            // same RGBA context that makeBackgroundTransparent uses.
+            let bgRegion = SpriteRegion(x: 0, y: rowY, width: 1, height: fontHeight)
+            guard let bgSprite = try? extractSprite(from: image, region: bgRegion),
+                  let bgColors = readAllRenderedRGB(from: bgSprite) else { continue }
 
             var x = 1  // Start scanning after 1-pixel background margin
 
@@ -183,8 +209,9 @@ public struct BMPLoader: Sendable {
 
                 let region = SpriteRegion(x: x, y: rowY, width: charWidth, height: fontHeight)
                 if let sprite = try? extractSprite(from: image, region: region),
-                   let spriteName = SpriteName.genFont(letter, selected: selected) {
-                    sprites[spriteName] = sprite
+                   let spriteName = SpriteName.genFont(letter, selected: selected),
+                   let transparent = makeBackgroundTransparent(sprite, backgroundColors: bgColors) {
+                    sprites[spriteName] = transparent
                 }
 
                 x = nextBg + 1  // Skip 1-pixel gap
@@ -192,6 +219,98 @@ public struct BMPLoader: Sendable {
         }
 
         return sprites
+    }
+
+    /// A hashable RGB triplet for building sets of background colors.
+    private struct RGB: Hashable {
+        let r: UInt8, g: UInt8, b: UInt8
+    }
+
+    /// Replace background-colored pixels with transparent pixels in a font sprite.
+    /// BMP fonts have their row's background color baked into every non-letter pixel.
+    /// Making those transparent lets the sprite composite cleanly over any background.
+    ///
+    /// Accepts a set of background colors to handle dithered backgrounds (where
+    /// the "background" is actually multiple alternating colors). All colors in the
+    /// set are treated as background and made transparent.
+    private static func makeBackgroundTransparent(
+        _ sprite: CGImage,
+        backgroundColors: Set<RGB>
+    ) -> CGImage? {
+        let w = sprite.width
+        let h = sprite.height
+        let bytesPerPixel = 4
+        let bytesPerRow = w * bytesPerPixel
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+        guard let context = CGContext(
+            data: nil, width: w, height: h,
+            bitsPerComponent: 8, bytesPerRow: bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        // Draw the original sprite into the RGBA context
+        context.draw(sprite, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        guard let data = context.data else { return nil }
+        let ptr = data.bindMemory(to: UInt8.self, capacity: bytesPerRow * h)
+
+        let tolerance: Int = 3
+
+        for y in 0..<h {
+            for x in 0..<w {
+                let offset = y * bytesPerRow + x * bytesPerPixel
+                let r = ptr[offset]
+                let g = ptr[offset + 1]
+                let b = ptr[offset + 2]
+                let matches = backgroundColors.contains { bg in
+                    abs(Int(r) - Int(bg.r)) <= tolerance
+                        && abs(Int(g) - Int(bg.g)) <= tolerance
+                        && abs(Int(b) - Int(bg.b)) <= tolerance
+                }
+                if matches {
+                    // Zero all channels for correct premultiplied alpha
+                    ptr[offset] = 0
+                    ptr[offset + 1] = 0
+                    ptr[offset + 2] = 0
+                    ptr[offset + 3] = 0
+                }
+            }
+        }
+
+        return context.makeImage()
+    }
+
+    /// Read all unique RGB colors from a sprite by rendering it into an RGBA context.
+    /// Used to collect the complete background palette from an all-background sprite
+    /// (like the space character), handling both solid and dithered backgrounds.
+    private static func readAllRenderedRGB(from sprite: CGImage) -> Set<RGB>? {
+        let w = sprite.width
+        let h = sprite.height
+        let bytesPerPixel = 4
+        let bytesPerRow = w * bytesPerPixel
+
+        guard let context = CGContext(
+            data: nil, width: w, height: h,
+            bitsPerComponent: 8, bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        context.draw(sprite, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        guard let data = context.data else { return nil }
+        let ptr = data.bindMemory(to: UInt8.self, capacity: bytesPerRow * h)
+
+        var colors = Set<RGB>()
+        for y in 0..<h {
+            for x in 0..<w {
+                let offset = y * bytesPerRow + x * bytesPerPixel
+                colors.insert(RGB(r: ptr[offset], g: ptr[offset + 1], b: ptr[offset + 2]))
+            }
+        }
+        return colors
     }
 
     /// Compare two CGColor component arrays for approximate equality.
