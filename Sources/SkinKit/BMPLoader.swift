@@ -94,4 +94,44 @@ public struct BMPLoader: Sendable {
 
         return result
     }
+
+    /// Read the color of a single pixel from a CGImage.
+    /// - Parameters:
+    ///   - image: The source CGImage.
+    ///   - x: The x-coordinate of the pixel.
+    ///   - y: The y-coordinate of the pixel.
+    /// - Returns: The pixel color as a CGColor in sRGB color space.
+    /// - Throws: SkinError if coordinates are out of bounds or context creation fails.
+    public static func readPixelColor(from image: CGImage, x: Int, y: Int) throws -> CGColor {
+        guard x >= 0, x < image.width, y >= 0, y < image.height else {
+            throw SkinError.invalidBitmap("pixel (\(x), \(y)) out of bounds (\(image.width)x\(image.height))")
+        }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        var pixel: [UInt8] = [0, 0, 0, 0]  // RGBA
+        guard let context = CGContext(
+            data: &pixel,
+            width: 1,
+            height: 1,
+            bitsPerComponent: 8,
+            bytesPerRow: 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw SkinError.invalidBitmap("failed to create pixel context")
+        }
+
+        // Draw the single pixel into our 1x1 context
+        context.draw(image, in: CGRect(
+            x: -CGFloat(x),
+            y: -CGFloat(image.height - 1 - y),
+            width: CGFloat(image.width),
+            height: CGFloat(image.height)
+        ))
+
+        let r = CGFloat(pixel[0]) / 255.0
+        let g = CGFloat(pixel[1]) / 255.0
+        let b = CGFloat(pixel[2]) / 255.0
+        return CGColor(colorSpace: colorSpace, components: [r, g, b, 1.0])!
+    }
 }
