@@ -306,6 +306,20 @@ public enum SpriteName: String, CaseIterable, Sendable {
     case eqShadeCloseButton = "EQ_SHADE_CLOSE_BUTTON"
     case eqShadeCloseButtonActive = "EQ_SHADE_CLOSE_BUTTON_ACTIVE"
 
+    // MARK: - Browser Title Bar (MB.BMP)
+
+    // MB.BMP — Title bar (selected/focused state)
+    case mbTitleLeftSelected = "MB_TITLE_LEFT_SELECTED"
+    case mbTitleMiddleSelected = "MB_TITLE_MIDDLE_SELECTED"
+    case mbTitleFillSelected = "MB_TITLE_FILL_SELECTED"
+    case mbTitleRightSelected = "MB_TITLE_RIGHT_SELECTED"
+
+    // MB.BMP — Title bar (unselected/unfocused state)
+    case mbTitleLeft = "MB_TITLE_LEFT"
+    case mbTitleMiddle = "MB_TITLE_MIDDLE"
+    case mbTitleFill = "MB_TITLE_FILL"
+    case mbTitleRight = "MB_TITLE_RIGHT"
+
     // MARK: - Browse Window (GEN.BMP)
 
     // GEN.BMP — Title bar (selected/focused state)

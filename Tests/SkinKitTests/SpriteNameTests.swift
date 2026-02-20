@@ -138,7 +138,7 @@ struct SpriteNameTests {
 
     @Test("SpriteName total count includes PLEDIT, EQ, and GEN sprites")
     func spriteNameTotalCountIncludesPleditEqAndGenSprites() {
-        // 219 original sprites + 34 EQ sprites + 20 GEN sprites + 52 GEN font characters = 325 total
-        #expect(SpriteName.allCases.count == 325)
+        // 219 original sprites + 34 EQ sprites + 8 MB sprites + 20 GEN sprites + 52 GEN font characters = 333 total
+        #expect(SpriteName.allCases.count == 333)
     }
 }

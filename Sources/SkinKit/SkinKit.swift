@@ -353,13 +353,33 @@ public actor SkinLoader {
 
         // Fallback: load missing sprite sheets from the bundled base skin.
         // Collect which BMPs are needed, then extract the base ZIP once.
+        //
+        // All-or-nothing rule for the browse window: MB.BMP is required for a
+        // properly themed browse window. If a skin lacks MB.BMP, fall back the
+        // entire browse window (title bar + sides + bottom) to the base skin.
+        // This avoids mixing custom GEN.BMP body sprites with base MB.BMP
+        // title bar sprites, which would look jarring.
         if let baseURL = fallbackSkinURL {
             var missingBMPs: [SpriteDefinitions.BMPFile] = []
             if allSprites[.playlistTitleBar] == nil { missingBMPs.append(.pledit) }
             if allSprites[.eqWindowBackground] == nil { missingBMPs.append(.eqmain) }
             // EQ_EX is independent of EQMAIN — a skin can have EQMAIN but not EQ_EX
             if allSprites[.eqShadeBackground] == nil { missingBMPs.append(.eqEx) }
-            if allSprites[.genTopLeftSelected] == nil { missingBMPs.append(.gen) }
+
+            // Browse window: all-or-nothing MB.BMP + GEN.BMP fallback
+            let skinHasMB = allSprites[.mbTitleLeftSelected] != nil
+            if !skinHasMB {
+                missingBMPs.append(.mb)
+                // Replace any custom GEN.BMP sprites with base skin versions
+                // to avoid theme mixing between base MB.BMP and custom GEN.BMP
+                for sprite in SpriteDefinitions.sprites(in: .gen) {
+                    allSprites.removeValue(forKey: sprite)
+                }
+                missingBMPs.append(.gen)
+            } else if allSprites[.genTopLeftSelected] == nil {
+                // Skin has MB.BMP but lacks GEN.BMP — still need GEN for sides/bottom
+                missingBMPs.append(.gen)
+            }
 
             if !missingBMPs.isEmpty {
                 if let fallbackSprites = try? loadFallbackSprites(from: baseURL, bmpFiles: missingBMPs) {

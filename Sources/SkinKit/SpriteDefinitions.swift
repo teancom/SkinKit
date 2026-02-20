@@ -44,6 +44,7 @@ public enum SpriteDefinitions {
         case eqmain = "EQMAIN"
         case eqEx = "EQ_EX"
         case pledit = "PLEDIT"
+        case mb = "MB"
         case gen = "GEN"
 
         /// Returns the filename with .bmp extension.
@@ -203,6 +204,12 @@ public enum SpriteDefinitions {
             .eqShadeBalanceSliderRight,
             .eqMaximizeButtonActive, .eqMinimizeButtonActive,
             .eqShadeCloseButton, .eqShadeCloseButtonActive,
+        ],
+        .mb: [
+            .mbTitleLeftSelected, .mbTitleMiddleSelected,
+            .mbTitleFillSelected, .mbTitleRightSelected,
+            .mbTitleLeft, .mbTitleMiddle,
+            .mbTitleFill, .mbTitleRight,
         ],
         .gen: [
             .genTopLeftSelected, .genTopLeftEndSelected,
@@ -532,6 +539,18 @@ public enum SpriteDefinitions {
         .eqMinimizeButtonActive: SpriteRegion(x: 1, y: 47, width: 9, height: 9),
         .eqShadeCloseButton: SpriteRegion(x: 11, y: 38, width: 9, height: 9),
         .eqShadeCloseButtonActive: SpriteRegion(x: 11, y: 47, width: 9, height: 9),
+
+        // MB.BMP — Browser title bar (selected, y=0)
+        .mbTitleLeftSelected: SpriteRegion(x: 0, y: 0, width: 25, height: 20),
+        .mbTitleMiddleSelected: SpriteRegion(x: 26, y: 0, width: 100, height: 20),
+        .mbTitleFillSelected: SpriteRegion(x: 127, y: 0, width: 25, height: 20),
+        .mbTitleRightSelected: SpriteRegion(x: 153, y: 0, width: 25, height: 20),
+
+        // MB.BMP — Browser title bar (unselected, y=21)
+        .mbTitleLeft: SpriteRegion(x: 0, y: 21, width: 25, height: 20),
+        .mbTitleMiddle: SpriteRegion(x: 26, y: 21, width: 100, height: 20),
+        .mbTitleFill: SpriteRegion(x: 127, y: 21, width: 25, height: 20),
+        .mbTitleRight: SpriteRegion(x: 153, y: 21, width: 25, height: 20),
 
         // GEN.BMP — Title bar (selected)
         .genTopLeftSelected: SpriteRegion(x: 0, y: 0, width: 25, height: 20),
