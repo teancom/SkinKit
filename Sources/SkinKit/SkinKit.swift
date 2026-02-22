@@ -94,14 +94,21 @@ public enum SkinError: Error, Sendable, LocalizedError {
 public actor SkinLoader {
     private let fileManager = FileManager.default
 
+    /// The bundle to search for skin resources.
+    private let bundle: Bundle
+
     /// URL for the fallback skin used when a skin lacks PLEDIT.BMP.
     /// Defaults to the bundled base-2.91.wsz. Can be overridden for testing.
-    public var fallbackSkinURL: URL? = Bundle.main.url(forResource: "base-2.91", withExtension: "wsz")
+    public var fallbackSkinURL: URL?
 
-    public init() {}
+    public init(bundle: Bundle = .main) {
+        self.bundle = bundle
+        self.fallbackSkinURL = bundle.url(forResource: "base-2.91", withExtension: "wsz")
+    }
 
     /// Create a loader with a custom fallback skin URL (for testing).
     public init(fallbackSkinURL: URL?) {
+        self.bundle = .main
         self.fallbackSkinURL = fallbackSkinURL
     }
 
@@ -134,12 +141,15 @@ public actor SkinLoader {
         return try await loadFromDirectory(skinDir)
     }
 
-    /// Load a skin bundled with the application.
-    /// - Parameter bundleName: Name of the skin file (without extension) in the app bundle
+    /// Load a skin bundled with an application.
+    /// - Parameters:
+    ///   - bundleName: Name of the skin file (without extension)
+    ///   - bundle: Bundle to search for the resource (defaults to the loader's bundle)
     /// - Returns: Extracted skin data with sprites and configuration
     /// - Throws: SkinError if loading fails
-    public func load(named bundleName: String) async throws -> SkinData {
-        guard let url = Bundle.main.url(forResource: bundleName, withExtension: "wsz") else {
+    public func load(named bundleName: String, bundle: Bundle? = nil) async throws -> SkinData {
+        let searchBundle = bundle ?? self.bundle
+        guard let url = searchBundle.url(forResource: bundleName, withExtension: "wsz") else {
             throw SkinError.fileNotFound(bundleName + ".wsz")
         }
         return try await load(from: url)
