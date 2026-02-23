@@ -405,27 +405,13 @@ public actor SkinLoader {
             // Settings window: all-or-nothing easter egg titlebar fallback
             // Easter egg titlebar sprites come from TITLEBAR.BMP rows 5-6 (y=57, y=72).
             // If the skin's TITLEBAR.BMP is too short, these sprites will be nil.
-            // When missing, fall back the ENTIRE settings window to base skin:
-            // titlebar + GEN.BMP chrome + GenExColors. This mirrors the MB.BMP
-            // all-or-nothing pattern (AC2.2).
+            // When missing, fall back the TITLEBAR sprites to base skin.
+            // GEN.BMP fallback is handled at the VIEW LAYER in SkinnedSettingsView
+            // (not here), so the browse window always keeps custom GEN sprites intact.
             let skinHasEasterEggTitlebar = allSprites[.mainEasterEggTitleBarSelected] != nil
             if !skinHasEasterEggTitlebar {
                 if !missingBMPs.contains(.titlebar) {
                     missingBMPs.append(.titlebar)
-                }
-                // Also force GEN.BMP fallback — remove custom GEN sprites and reload from base.
-                // Same pattern as the MB.BMP fallback above (lines 388-394).
-                if !skinHasMB {
-                    // MB.BMP fallback already handled GEN above — skip
-                } else {
-                    // Skin has MB.BMP (so GEN wasn't removed above) but lacks easter egg.
-                    // Remove custom GEN sprites so settings window gets base GEN chrome.
-                    for sprite in SpriteDefinitions.sprites(in: .gen) {
-                        allSprites.removeValue(forKey: sprite)
-                    }
-                    if !missingBMPs.contains(.gen) {
-                        missingBMPs.append(.gen)
-                    }
                 }
             }
 

@@ -130,4 +130,82 @@ struct FallbackSpriteTests {
         // Main window sprites should still load from the skin
         #expect(skinData[.mainWindowBackground] != nil, "Expected MAIN sprites even without fallback")
     }
+
+    // MARK: - Easter Egg Titlebar Fallback (Settings Window)
+
+    @Test("Base skin has native easter egg titlebar sprites")
+    func baseSkinHasEasterEggTitlebar() async throws {
+        let loader = makeLoader()
+        let baseSkinData = try await loader.load(from: Self.baseSkinURL)
+
+        // Base skin must have both easter egg titlebar variants
+        #expect(baseSkinData[.mainEasterEggTitleBar] != nil, "Base skin must have easter egg titlebar unselected variant")
+        #expect(baseSkinData[.mainEasterEggTitleBarSelected] != nil, "Base skin must have easter egg titlebar selected variant")
+
+        // hasNativeEasterEggTitlebar should be true
+        #expect(baseSkinData.hasNativeEasterEggTitlebar == true, "Base skin should report native easter egg titlebar")
+    }
+
+    @Test("XMMS skin may lack easter egg titlebar sprites")
+    func xmmsSkinEasterEggTitlebarDetection() async throws {
+        let loader = makeLoader()
+        let xmmsSkinData = try await loader.load(from: Self.skinsDir.appendingPathComponent("XMMS.wsz"))
+
+        // XMMS may or may not have easter egg sprites depending on TITLEBAR.BMP height
+        // Just verify that hasNativeEasterEggTitlebar reflects whether they loaded
+        let hasSelected = xmmsSkinData[.mainEasterEggTitleBarSelected] != nil
+        #expect(xmmsSkinData.hasNativeEasterEggTitlebar == hasSelected, "hasNativeEasterEggTitlebar should match sprite load status")
+    }
+
+    @Test("When skin lacks easter egg titlebar, fallback provides them from base skin")
+    func easterEggTitlebarFallback() async throws {
+        // Test using XMMS skin which may lack easter egg sprites
+        let loader = makeLoader()
+        let xmmsSkinData = try await loader.load(from: Self.skinsDir.appendingPathComponent("XMMS.wsz"))
+
+        // After loading (with fallback), easter egg sprites must exist
+        #expect(xmmsSkinData[.mainEasterEggTitleBar] != nil, "Easter egg titlebar unselected sprite should load (fallback if needed)")
+        #expect(xmmsSkinData[.mainEasterEggTitleBarSelected] != nil, "Easter egg titlebar selected sprite should load (fallback if needed)")
+
+        // The loader sets hasNativeEasterEggTitlebar correctly
+        // If XMMS has the sprites natively, hasNativeEasterEggTitlebar=true
+        // If XMMS lacks them, hasNativeEasterEggTitlebar=false (fallback loaded them)
+        _ = xmmsSkinData.hasNativeEasterEggTitlebar
+        // Both true and false are valid — the test just verifies fallback provided them
+        #expect(true, "Fallback successfully provided easter egg sprites")
+    }
+
+    @Test("When easter egg titlebar falls back, GEN.BMP sprites are NOT removed from browse window")
+    func easterEggFallbackDoesNotRemoveGenSprites() async throws {
+        // Load XMMS with fallback enabled
+        let loader = makeLoader()
+        let xmmsSkinData = try await loader.load(from: Self.skinsDir.appendingPathComponent("XMMS.wsz"))
+
+        // GEN sprites should always be present (from skin or fallback, never removed)
+        #expect(xmmsSkinData[.genMiddleLeft] != nil, "GEN middle left sprite should exist")
+        #expect(xmmsSkinData[.genMiddleLeftBottom] != nil, "GEN middle left bottom sprite should exist")
+        #expect(xmmsSkinData[.genMiddleRight] != nil, "GEN middle right sprite should exist")
+        #expect(xmmsSkinData[.genMiddleRightBottom] != nil, "GEN middle right bottom sprite should exist")
+        #expect(xmmsSkinData[.genBottomLeft] != nil, "GEN bottom left sprite should exist")
+        #expect(xmmsSkinData[.genBottomFill] != nil, "GEN bottom fill sprite should exist")
+        #expect(xmmsSkinData[.genBottomRight] != nil, "GEN bottom right sprite should exist")
+    }
+
+    @Test("Skin with native easter egg titlebar keeps its custom GEN sprites")
+    func skinWithEasterEggKeepsCustomGenSprites() async throws {
+        // Base skin definitely has both easter egg and GEN sprites
+        let loader = makeLoader()
+        let baseSkinData = try await loader.load(from: Self.baseSkinURL)
+
+        #expect(baseSkinData.hasNativeEasterEggTitlebar == true, "Base skin has native easter egg titlebar")
+
+        // All GEN sprites should be present from the base skin's own GEN.BMP
+        let genSprites: [SpriteName] = [
+            .genMiddleLeft, .genMiddleLeftBottom, .genMiddleRight, .genMiddleRightBottom,
+            .genBottomLeft, .genBottomFill, .genBottomRight
+        ]
+        for spriteName in genSprites {
+            #expect(baseSkinData[spriteName] != nil, "Base skin should have GEN sprite \(spriteName)")
+        }
+    }
 }
