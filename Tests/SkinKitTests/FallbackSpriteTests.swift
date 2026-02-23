@@ -208,4 +208,71 @@ struct FallbackSpriteTests {
             #expect(baseSkinData[spriteName] != nil, "Base skin should have GEN sprite \(spriteName)")
         }
     }
+
+    // MARK: - F1: TITLEBAR.BMP Fallback (Settings Window)
+
+    @Test("F1: When skin lacks easter egg titlebar sprites, they are loaded from base skin")
+    func titlebarFallbackForMissingEasterEggSprites() async throws {
+        // XMMS typically has a short TITLEBAR.BMP without easter egg rows (y=57, y=72)
+        let loader = makeLoader()
+        let xmmsSkinData = try await loader.load(from: Self.skinsDir.appendingPathComponent("XMMS.wsz"))
+
+        // After loading, easter egg titlebar sprites must exist (from fallback if needed)
+        #expect(
+            xmmsSkinData[.mainEasterEggTitleBar] != nil,
+            "Easter egg titlebar unselected sprite should exist (from fallback if skin lacked it)"
+        )
+        #expect(
+            xmmsSkinData[.mainEasterEggTitleBarSelected] != nil,
+            "Easter egg titlebar selected sprite should exist (from fallback if skin lacked it)"
+        )
+
+        // hasNativeEasterEggTitlebar correctly reflects whether XMMS provides them natively
+        // If true, XMMS has tall enough TITLEBAR.BMP; if false, fallback provided them
+        // Both states are valid — this test verifies that fallback made them available
+        _ = xmmsSkinData.hasNativeEasterEggTitlebar
+    }
+
+    @Test("F1: hasNativeEasterEggTitlebar flag is set correctly")
+    func easterEggTitlebarFlagAccuracy() async throws {
+        // Base skin should have native easter egg titlebar
+        let loader = makeLoader()
+        let baseSkinData = try await loader.load(from: Self.baseSkinURL)
+        #expect(
+            baseSkinData.hasNativeEasterEggTitlebar == true,
+            "Base skin should report native easter egg titlebar (hasNativeEasterEggTitlebar = true)"
+        )
+
+        // XMMS may or may not have native easter egg titlebar depending on TITLEBAR.BMP height
+        let xmmsSkinData = try await loader.load(from: Self.skinsDir.appendingPathComponent("XMMS.wsz"))
+
+        // If hasNativeEasterEggTitlebar is true, the sprites must come from XMMS's own TITLEBAR.BMP
+        // If hasNativeEasterEggTitlebar is false, the sprites were filled from base skin fallback
+        let hasSelected = xmmsSkinData[.mainEasterEggTitleBarSelected] != nil
+        #expect(
+            xmmsSkinData.hasNativeEasterEggTitlebar == hasSelected,
+            "hasNativeEasterEggTitlebar flag should match whether selected sprite exists"
+        )
+    }
+
+    @Test("F1: Classified skin handles easter egg titlebar correctly")
+    func classifiedSkinEasterEggTitlebar() async throws {
+        // Classified skin should handle easter egg titlebar (either native or fallback)
+        let loader = makeLoader()
+        let classifiedSkinData = try await loader.load(from: Self.skinsDir.appendingPathComponent("Winamp5_Classified_v5.5.wsz"))
+
+        // After loading, both sprites must exist
+        #expect(
+            classifiedSkinData[.mainEasterEggTitleBar] != nil,
+            "Classified skin should have easter egg titlebar unselected sprite"
+        )
+        #expect(
+            classifiedSkinData[.mainEasterEggTitleBarSelected] != nil,
+            "Classified skin should have easter egg titlebar selected sprite"
+        )
+
+        // hasNativeEasterEggTitlebar may be true or false — both are valid
+        // This test verifies the fallback made them available if needed
+        _ = classifiedSkinData.hasNativeEasterEggTitlebar
+    }
 }
