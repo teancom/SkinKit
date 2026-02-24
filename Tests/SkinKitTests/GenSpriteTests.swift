@@ -9,17 +9,12 @@ import CoreGraphics
 @Suite("GEN Sprite Tests")
 struct GenSpriteTests {
 
-    /// Path to the project-root `skins/` directory, computed from this test file's location.
+    /// Path to the test `Fixtures/` directory, computed from this test file's location.
     private static let skinsDir: URL = {
-        // GenSpriteTests.swift → SkinKitTests/ → Tests/ → SkinKit/ → Packages/ → project root
         let testFile = URL(fileURLWithPath: #filePath)
         return testFile
             .deletingLastPathComponent()  // SkinKitTests/
-            .deletingLastPathComponent()  // Tests/
-            .deletingLastPathComponent()  // SkinKit/
-            .deletingLastPathComponent()  // Packages/
-            .deletingLastPathComponent()  // project root
-            .appendingPathComponent("skins")
+            .appendingPathComponent("Fixtures")
     }()
 
     private static let baseSkinURL: URL = skinsDir.appendingPathComponent("base-2.91.wsz")

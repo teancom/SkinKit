@@ -141,7 +141,7 @@ struct INIParserTests {
 
         #expect(config.fontName == "Helvetica")
         // Colors should be defaults (green on black)
-        #expect(config.normalTextColor != nil)
+        let _ = config.normalTextColor  // Non-optional CGColor, just verify it exists
     }
 
     @Test("Uses all defaults for empty content")
