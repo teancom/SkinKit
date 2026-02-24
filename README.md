@@ -48,3 +48,11 @@ dependencies: [
 swift build
 swift test
 ```
+
+## Standing on the shoulders of Webamp
+
+This project would not exist without [Webamp](https://github.com/captbaritone/webamp) by Jordan Eldredge. The Winamp skin format was never formally documented — the only "spec" was the original Winamp source code and the community knowledge built around it. Webamp's faithful open-source reimplementation made all of that knowledge accessible: sprite sheet coordinates, layout composition rules, character rendering offsets, equalizer slider geometry, and countless other details we relied on to parse WSZ files and assemble their sprites into a pixel-accurate interface. Parsing BMP sprite sheets and getting every pixel in the right place would have been a far more daunting undertaking without Webamp lighting the way. Thank you, Jordan, and all Webamp contributors.
+
+## Acknowledgments
+
+- [Webamp](https://github.com/captbaritone/webamp) by Jordan Eldredge (see above)
